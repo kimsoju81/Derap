@@ -28,6 +28,7 @@ jobs:
 
       - name: Pasang Android Command-line Tools & SDK
         run: |
+          set -e
           ANDROID_SDK_ROOT="$HOME/android-sdk"
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
           curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
@@ -36,10 +37,12 @@ jobs:
           rm cmdline-tools.zip
 
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null
-          "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
             "platform-tools" \
             "platforms;android-34" \
-            "build-tools;34.0.0"
+            "platforms;android-35" \
+            "build-tools;34.0.0" \
+            "build-tools;35.0.0"
 
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
@@ -48,23 +51,29 @@ jobs:
       - name: Pasang Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Jana Keystore Tandatangan APK
+      - name: Sediakan Keystore Tandatangan APK
         run: |
-          keytool -genkeypair -v \
-            -keystore "$GITHUB_WORKSPACE/android.keystore" \
-            -alias derapkey \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -storepass derap123 \
-            -keypass derap123 \
-            -dname "CN=Derap, OU=Development, O=Derap, L=Melaka, ST=Melaka, C=MY"
+          set -e
+          if [ -n "${{ secrets.DERAP_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.DERAP_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/android.keystore"
+          else
+            keytool -genkeypair -v \
+              -keystore "$GITHUB_WORKSPACE/android.keystore" \
+              -alias derapkey \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass derap123 \
+              -keypass derap123 \
+              -dname "CN=Derap, OU=Development, O=Derap, L=Melaka, ST=Melaka, C=MY"
+          fi
 
       - name: Cipta konfigurasi Bubblewrap & Bina APK
         run: |
+          set -e
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
-          printf 'n\nn\nn\nn\nn\nn\nn\nn\n' | bubblewrap init \
+          yes "" | bubblewrap init \
             --manifest="https://kimsoju81.github.io/Derap/manifest.json" \
             --directory="." \
             --jdkPath="$JAVA_HOME" \
