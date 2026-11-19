@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ms">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Derap — Navigasi Jalan Raya Malaysia (OpenStreetMap)</title>
+    <meta name="description" content="Derap: Aplikasi navigasi jalan raya pintar Malaysia menggunakan OpenStreetMap, OSRM, dan Nominatim." />
+    <meta property="og:title" content="Derap — Navigasi Jalan Raya Malaysia" />
+    <meta property="og:description" content="Derap: Aplikasi navigasi jalan raya pintar Malaysia menggunakan OpenStreetMap, OSRM, dan Nominatim." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-slate-950 text-slate-900 antialiased selection:bg-emerald-500 selection:text-white">
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var reg of regs) { reg.unregister(); }
+        }).catch(function() {});
+      }
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
