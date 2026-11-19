@@ -36,7 +36,7 @@ jobs:
           mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
           rm cmdline-tools.zip
 
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
             "platform-tools" \
             "platforms;android-34" \
@@ -73,7 +73,10 @@ jobs:
           set -e
           mkdir -p "$GITHUB_WORKSPACE/twa-project"
           cd "$GITHUB_WORKSPACE/twa-project"
-          yes "" | bubblewrap init \
+
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
+
+          bubblewrap init \
             --manifest="https://kimsoju81.github.io/Derap/manifest.json" \
             --directory="." \
             --jdkPath="$JAVA_HOME" \
@@ -81,7 +84,22 @@ jobs:
             --signingKeyPath="$GITHUB_WORKSPACE/android.keystore" \
             --signingKeyAlias="derapkey" \
             --storePassword="derap123" \
-            --keyPassword="derap123"
+            --keyPassword="derap123" \
+            < /dev/null || true
+
+          if [ ! -f "twa-manifest.json" ]; then
+            printf 'n\n' | bubblewrap init \
+              --manifest="https://kimsoju81.github.io/Derap/manifest.json" \
+              --directory="." \
+              --jdkPath="$JAVA_HOME" \
+              --androidSdkPath="$ANDROID_HOME" \
+              --signingKeyPath="$GITHUB_WORKSPACE/android.keystore" \
+              --signingKeyAlias="derapkey" \
+              --storePassword="derap123" \
+              --keyPassword="derap123"
+          fi
+
+          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
           bubblewrap build --skipPwaValidation
 
       - name: Muat Naik Fail APK sebagai Artifact
