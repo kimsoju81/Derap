@@ -91,23 +91,22 @@ jobs:
             const height = 512;
             const raw = Buffer.alloc((width * 4 + 1) * height);
 
-            // Warna latar navy #001F3F dan lencana tengah #FFFFFF
             for (let y = 0; y < height; y++) {
               const rowStart = y * (width * 4 + 1);
-              raw[rowStart] = 0; // filter type 0
+              raw[rowStart] = 0;
               for (let x = 0; x < width; x++) {
                 const idx = rowStart + 1 + x * 4;
                 const inBox = x >= 112 && x <= 400 && y >= 112 && y <= 400;
                 if (inBox) {
-                  raw[idx] = 255;     // R
-                  raw[idx + 1] = 255; // G
-                  raw[idx + 2] = 255; // B
-                  raw[idx + 3] = 255; // A
+                  raw[idx] = 255;
+                  raw[idx + 1] = 255;
+                  raw[idx + 2] = 255;
+                  raw[idx + 3] = 255;
                 } else {
-                  raw[idx] = 0;       // R
-                  raw[idx + 1] = 31;  // G
-                  raw[idx + 2] = 63;  // B
-                  raw[idx + 3] = 255; // A
+                  raw[idx] = 0;
+                  raw[idx + 1] = 31;
+                  raw[idx + 2] = 63;
+                  raw[idx + 3] = 255;
                 }
               }
             }
@@ -135,8 +134,8 @@ jobs:
             const ihdr = Buffer.alloc(13);
             ihdr.writeUInt32BE(width, 0);
             ihdr.writeUInt32BE(height, 4);
-            ihdr[8] = 8; // bit depth
-            ihdr[9] = 6; // RGBA
+            ihdr[8] = 8;
+            ihdr[9] = 6;
             ihdr[10] = 0;
             ihdr[11] = 0;
             ihdr[12] = 0;
@@ -164,7 +163,7 @@ jobs:
             "backgroundColor": "#FFFFFF",
             "enableNotifications": true,
             "startUrl": "/",
-            "iconUrl": "./icon-512.png",
+            "iconUrl": "http://127.0.0.1:8765/icon-512.png",
             "splashScreenFadeOutDuration": 300,
             "signingKey": {
               "path": "../android-signing/release.keystore",
@@ -197,19 +196,34 @@ jobs:
             npm install --no-save @bubblewrap/core >/dev/null 2>&1
             node -e '
               const fs = require("fs");
-              const path = require("path");
+              const http = require("http");
               const bubblewrapCore = require("@bubblewrap/core");
               const { TwaManifest, GradleWrapper, TwaGenerator, ConsoleLog } = bubblewrapCore;
 
               (async () => {
-                const log = ConsoleLog ? new ConsoleLog("derap-twa") : console;
-                const manifestJson = JSON.parse(fs.readFileSync("./twa-manifest.json", "utf8"));
-                manifestJson.iconUrl = "file://" + path.resolve("./icon-512.png");
-                const twaManifest = new TwaManifest(manifestJson);
-                const twaGenerator = new TwaGenerator();
-                await twaGenerator.createTwaProject(process.cwd(), twaManifest, log);
-                const gradleWrapper = new GradleWrapper(log);
-                await gradleWrapper.install(process.cwd(), log);
+                const pngBuffer = fs.readFileSync("./icon-512.png");
+                const server = http.createServer((req, res) => {
+                  res.writeHead(200, {
+                    "Content-Type": "image/png",
+                    "Content-Length": pngBuffer.length
+                  });
+                  res.end(pngBuffer);
+                });
+
+                await new Promise((resolve) => server.listen(8765, "127.0.0.1", resolve));
+
+                try {
+                  const log = ConsoleLog ? new ConsoleLog("derap-twa") : console;
+                  const manifestJson = JSON.parse(fs.readFileSync("./twa-manifest.json", "utf8"));
+                  manifestJson.iconUrl = "http://127.0.0.1:8765/icon-512.png";
+                  const twaManifest = new TwaManifest(manifestJson);
+                  const twaGenerator = new TwaGenerator();
+                  await twaGenerator.createTwaProject(process.cwd(), twaManifest, log);
+                  const gradleWrapper = new GradleWrapper(log);
+                  await gradleWrapper.install(process.cwd(), log);
+                } finally {
+                  server.close();
+                }
               })().catch((err) => {
                 console.error(err);
                 process.exit(1);
