@@ -7,6 +7,7 @@ on:
       - main
 
 env:
+  # Gantikan dengan URL sebenar aplikasi web Derap yang telah di-deploy (contoh: https://derap-studio.ai.studio atau URL GitHub Pages/Vercel anda)
   APP_URL: "https://derap-studio.ai.studio"
   APP_NAME: "Derap"
   PACKAGE_ID: "org.derap.nav.twa"
@@ -67,6 +68,7 @@ jobs:
       - name: Konfigurasi Bubblewrap (JDK & Android SDK)
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
           set -e
           ANDROID_SDK_ROOT="$HOME/android-sdk"
@@ -99,7 +101,7 @@ jobs:
             "splashScreenFadeOutDuration": 300,
             "signingKey": {
               "path": "../android-signing/release.keystore",
-              "alias": "${{ secrets.KEY_ALIAS }}"
+              "alias": "$KEY_ALIAS"
             },
             "appVersionCode": 1,
             "appVersionName": "1.0.0",
@@ -114,18 +116,37 @@ jobs:
           EOF
           fi
 
-      - name: Jana projek TWA & bina APK
+      - name: Jana projek Android TWA & bina APK
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
           set -e
           cd twa-app
+
           if [ ! -f "build.gradle" ]; then
-            bubblewrap init --manifest=./twa-manifest.json --skipPwaValidation < /dev/null
-          else
-            bubblewrap update --skipPwaValidation < /dev/null || true
+            npm init -y >/dev/null 2>&1
+            npm install --no-save @bubblewrap/core >/dev/null 2>&1
+            node -e '
+              const fs = require("fs");
+              const path = require("path");
+              const { TwaManifest, GradleWrapper, TwaGenerator, Log } = require("@bubblewrap/core");
+
+              (async () => {
+                const log = new Log("derap-twa");
+                const manifestJson = JSON.parse(fs.readFileSync("./twa-manifest.json", "utf8"));
+                const twaManifest = new TwaManifest(manifestJson);
+                const twaGenerator = new TwaGenerator();
+                await twaGenerator.createTwaProject(process.cwd(), twaManifest, log);
+                const gradleWrapper = new GradleWrapper(log);
+                await gradleWrapper.install(process.cwd(), log);
+              })().catch((err) => {
+                console.error(err);
+                process.exit(1);
+              });
+            '
           fi
 
           bubblewrap build \
