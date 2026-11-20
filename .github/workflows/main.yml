@@ -1,4 +1,4 @@
-name: Bina Derap Studio TWA APK
+name: Bina Derap TWA APK
 
 on:
   workflow_dispatch:
@@ -7,10 +7,9 @@ on:
       - main
 
 env:
-  # Tukar kepada URL sebenar aplikasi web Derap Studio anda yang telah di-deploy (HTTPS)
   APP_URL: "https://derap-studio.ai.studio"
-  APP_NAME: "Derap Studio"
-  PACKAGE_ID: "studio.ai.derap.twa"
+  APP_NAME: "Derap"
+  PACKAGE_ID: "org.derap.nav.twa"
 
 jobs:
   build-apk:
@@ -45,7 +44,9 @@ jobs:
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
             "platform-tools" \
+            "platforms;android-34" \
             "platforms;android-35" \
+            "build-tools;34.0.0" \
             "build-tools;35.0.0"
 
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
@@ -63,21 +64,27 @@ jobs:
           mkdir -p android-signing
           echo "$KEYSTORE_BASE64" | base64 -d > android-signing/release.keystore
 
-      - name: Sediakan konfigurasi Bubblewrap (jika belum wujud)
+      - name: Sediakan konfigurasi Bubblewrap
+        env:
+          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
           set -e
+          ANDROID_SDK_ROOT="$HOME/android-sdk"
+          JDK_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
+          HOST_NAME=$(echo "$APP_URL" | sed -e 's|^[^/]*//||' -e 's|/.*$||')
+
           mkdir -p twa-app
           if [ ! -f "twa-app/twa-manifest.json" ]; then
             cat <<EOF > twa-app/twa-manifest.json
           {
             "packageId": "$PACKAGE_ID",
-            "host": "$(echo $APP_URL | sed -e 's|^[^/]*//||' -e 's|/.*$||')",
+            "host": "$HOST_NAME",
             "name": "$APP_NAME",
             "launcherName": "Derap",
             "display": "standalone",
-            "themeColor": "#0F172A",
-            "navigationColor": "#000000",
-            "backgroundColor": "#0F172A",
+            "themeColor": "#001F3F",
+            "navigationColor": "#001F3F",
+            "backgroundColor": "#FFFFFF",
             "enableNotifications": true,
             "startUrl": "/",
             "iconUrl": "$APP_URL/icon-512.png",
@@ -104,12 +111,18 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
           set -e
+          ANDROID_SDK_ROOT="$HOME/android-sdk"
+          JDK_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
+
           cd twa-app
-          bubblewrap update --skipPwaValidation --manifest=twa-manifest.json
-          bubblewrap build \
+          yes "n" | bubblewrap update --skipPwaValidation --manifest=twa-manifest.json || true
+          yes "n" | bubblewrap build \
             --skipPwaValidation \
+            --jdkPath="$JDK_DIR" \
+            --androidSdkPath="$ANDROID_SDK_ROOT" \
             --signingKeyPath="../android-signing/release.keystore" \
             --signingKeyAlias="$KEY_ALIAS" \
             --storePassword="$KEYSTORE_PASSWORD" \
@@ -118,7 +131,7 @@ jobs:
       - name: Muat naik artifak APK & AAB
         uses: actions/upload-artifact@v4
         with:
-          name: derap-studio-twa-release
+          name: derap-twa-release
           path: |
             twa-app/app-release-signed.apk
             twa-app/app-release-bundle.aab
