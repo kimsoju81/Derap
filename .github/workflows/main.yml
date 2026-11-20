@@ -7,7 +7,6 @@ on:
       - main
 
 env:
-  # Gantikan dengan URL sebenar aplikasi web Derap yang telah di-deploy (contoh: https://derap-studio.ai.studio atau URL GitHub Pages/Vercel anda)
   APP_URL: "https://derap-studio.ai.studio"
   APP_NAME: "Derap"
   PACKAGE_ID: "org.derap.nav.twa"
@@ -131,11 +130,11 @@ jobs:
             npm install --no-save @bubblewrap/core >/dev/null 2>&1
             node -e '
               const fs = require("fs");
-              const path = require("path");
-              const { TwaManifest, GradleWrapper, TwaGenerator, Log } = require("@bubblewrap/core");
+              const bubblewrapCore = require("@bubblewrap/core");
+              const { TwaManifest, GradleWrapper, TwaGenerator, ConsoleLog } = bubblewrapCore;
 
               (async () => {
-                const log = new Log("derap-twa");
+                const log = ConsoleLog ? new ConsoleLog("derap-twa") : console;
                 const manifestJson = JSON.parse(fs.readFileSync("./twa-manifest.json", "utf8"));
                 const twaManifest = new TwaManifest(manifestJson);
                 const twaGenerator = new TwaGenerator();
