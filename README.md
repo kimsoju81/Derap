@@ -57,4 +57,4 @@ Aplikasi ini menggunakan servis komuniti terbuka bagi tujuan prototaip dan pemba
 2. **Menukar Pelayan Jubin Peta**:
    - Buka `src/components/MapView.tsx` dan kemas kini prop `url` pada komponen `<TileLayer />` kepada pelayan jubin komersial atau hos sendiri sekiranya aplikasi digunakan secara berskala besar.
 3. **Menyambungkan Backend Trafik & Laporan Komuniti**:
-   - Sambungkan fungsi `handleAddLocalReport` dalam `src/App.tsx` kepada pangkalan data masa nyata (seperti Firebase Firestore atau PostgreSQL/WebSocket) untuk berkongsi laporan pengguna merentas peranti.
+   - Sambungkan fungsi `handleAddLocalReport` dalam `src/App.tsx` kepada pangkalan data masa nyata (seperti Firebase Firestore atau PostgreSQL/WebSocket) untuk berkongsi laporan pengguna merentas peranti.w
