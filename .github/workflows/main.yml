@@ -1,4 +1,4 @@
-name: Bina Derap TWA APK
+name: Bina Derap Studio TWA APK
 
 on:
   workflow_dispatch:
@@ -6,10 +6,16 @@ on:
     branches:
       - main
 
+env:
+  # Tukar kepada URL sebenar aplikasi web Derap Studio anda yang telah di-deploy (HTTPS)
+  APP_URL: "https://derap-studio.ai.studio"
+  APP_NAME: "Derap Studio"
+  PACKAGE_ID: "studio.ai.derap.twa"
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repositori
@@ -39,9 +45,7 @@ jobs:
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
           yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
             "platform-tools" \
-            "platforms;android-34" \
             "platforms;android-35" \
-            "build-tools;34.0.0" \
             "build-tools;35.0.0"
 
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
@@ -49,4 +53,73 @@ jobs:
           echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
 
       - name: Pasang Bubblewrap CLI
-        run:
+        run: npm install -g @bubblewrap/cli
+
+      - name: Nyahkod Keystore Android
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -e
+          mkdir -p android-signing
+          echo "$KEYSTORE_BASE64" | base64 -d > android-signing/release.keystore
+
+      - name: Sediakan konfigurasi Bubblewrap (jika belum wujud)
+        run: |
+          set -e
+          mkdir -p twa-app
+          if [ ! -f "twa-app/twa-manifest.json" ]; then
+            cat <<EOF > twa-app/twa-manifest.json
+          {
+            "packageId": "$PACKAGE_ID",
+            "host": "$(echo $APP_URL | sed -e 's|^[^/]*//||' -e 's|/.*$||')",
+            "name": "$APP_NAME",
+            "launcherName": "Derap",
+            "display": "standalone",
+            "themeColor": "#0F172A",
+            "navigationColor": "#000000",
+            "backgroundColor": "#0F172A",
+            "enableNotifications": true,
+            "startUrl": "/",
+            "iconUrl": "$APP_URL/icon-512.png",
+            "splashScreenFadeOutDuration": 300,
+            "signingKey": {
+              "path": "../android-signing/release.keystore",
+              "alias": "${{ secrets.KEY_ALIAS }}"
+            },
+            "appVersionCode": 1,
+            "appVersionName": "1.0.0",
+            "shortcuts": [],
+            "generatorApp": "bubblewrap-cli",
+            "fallbackType": "customtabs",
+            "features": {},
+            "enableSiteSettingsShortcut": true,
+            "isChromeOSOnly": false,
+            "orientation": "default"
+          }
+          EOF
+          fi
+
+      - name: Jana projek TWA & bina APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -e
+          cd twa-app
+          bubblewrap update --skipPwaValidation --manifest=twa-manifest.json
+          bubblewrap build \
+            --skipPwaValidation \
+            --signingKeyPath="../android-signing/release.keystore" \
+            --signingKeyAlias="$KEY_ALIAS" \
+            --storePassword="$KEYSTORE_PASSWORD" \
+            --keyPassword="$KEY_PASSWORD"
+
+      - name: Muat naik artifak APK & AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: derap-studio-twa-release
+          path: |
+            twa-app/app-release-signed.apk
+            twa-app/app-release-bundle.aab
+          if-no-files-found: error
