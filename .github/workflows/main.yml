@@ -64,7 +64,7 @@ jobs:
           mkdir -p android-signing
           echo "$KEYSTORE_BASE64" | base64 -d > android-signing/release.keystore
 
-      - name: Konfigurasi Bubblewrap (JDK & Android SDK)
+      - name: Konfigurasi Bubblewrap & Ikon PNG Tempatan
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -83,8 +83,76 @@ jobs:
           EOF
 
           mkdir -p twa-app
-          if [ ! -f "twa-app/twa-manifest.json" ]; then
-            cat <<EOF > twa-app/twa-manifest.json
+          node -e '
+            const fs = require("fs");
+            const zlib = require("zlib");
+
+            const width = 512;
+            const height = 512;
+            const raw = Buffer.alloc((width * 4 + 1) * height);
+
+            // Warna latar navy #001F3F dan lencana tengah #FFFFFF
+            for (let y = 0; y < height; y++) {
+              const rowStart = y * (width * 4 + 1);
+              raw[rowStart] = 0; // filter type 0
+              for (let x = 0; x < width; x++) {
+                const idx = rowStart + 1 + x * 4;
+                const inBox = x >= 112 && x <= 400 && y >= 112 && y <= 400;
+                if (inBox) {
+                  raw[idx] = 255;     // R
+                  raw[idx + 1] = 255; // G
+                  raw[idx + 2] = 255; // B
+                  raw[idx + 3] = 255; // A
+                } else {
+                  raw[idx] = 0;       // R
+                  raw[idx + 1] = 31;  // G
+                  raw[idx + 2] = 63;  // B
+                  raw[idx + 3] = 255; // A
+                }
+              }
+            }
+
+            function crc32(buf) {
+              let c = 0xffffffff;
+              for (let i = 0; i < buf.length; i++) {
+                c ^= buf[i];
+                for (let k = 0; k < 8; k++) {
+                  c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+                }
+              }
+              return (c ^ 0xffffffff) >>> 0;
+            }
+
+            function chunk(type, data) {
+              const len = Buffer.alloc(4);
+              len.writeUInt32BE(data.length, 0);
+              const typeBuf = Buffer.from(type, "ascii");
+              const crcBuf = Buffer.alloc(4);
+              crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
+              return Buffer.concat([len, typeBuf, data, crcBuf]);
+            }
+
+            const ihdr = Buffer.alloc(13);
+            ihdr.writeUInt32BE(width, 0);
+            ihdr.writeUInt32BE(height, 4);
+            ihdr[8] = 8; // bit depth
+            ihdr[9] = 6; // RGBA
+            ihdr[10] = 0;
+            ihdr[11] = 0;
+            ihdr[12] = 0;
+
+            const idat = zlib.deflateSync(raw);
+            const png = Buffer.concat([
+              Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+              chunk("IHDR", ihdr),
+              chunk("IDAT", idat),
+              chunk("IEND", Buffer.alloc(0))
+            ]);
+
+            fs.writeFileSync("twa-app/icon-512.png", png);
+          '
+
+          cat <<EOF > twa-app/twa-manifest.json
           {
             "packageId": "$PACKAGE_ID",
             "host": "$HOST_NAME",
@@ -96,7 +164,7 @@ jobs:
             "backgroundColor": "#FFFFFF",
             "enableNotifications": true,
             "startUrl": "/",
-            "iconUrl": "$APP_URL/icon-512.png",
+            "iconUrl": "./icon-512.png",
             "splashScreenFadeOutDuration": 300,
             "signingKey": {
               "path": "../android-signing/release.keystore",
@@ -113,7 +181,6 @@ jobs:
             "orientation": "default"
           }
           EOF
-          fi
 
       - name: Jana projek Android TWA & bina APK
         env:
@@ -130,12 +197,14 @@ jobs:
             npm install --no-save @bubblewrap/core >/dev/null 2>&1
             node -e '
               const fs = require("fs");
+              const path = require("path");
               const bubblewrapCore = require("@bubblewrap/core");
               const { TwaManifest, GradleWrapper, TwaGenerator, ConsoleLog } = bubblewrapCore;
 
               (async () => {
                 const log = ConsoleLog ? new ConsoleLog("derap-twa") : console;
                 const manifestJson = JSON.parse(fs.readFileSync("./twa-manifest.json", "utf8"));
+                manifestJson.iconUrl = "file://" + path.resolve("./icon-512.png");
                 const twaManifest = new TwaManifest(manifestJson);
                 const twaGenerator = new TwaGenerator();
                 await twaGenerator.createTwaProject(process.cwd(), twaManifest, log);
