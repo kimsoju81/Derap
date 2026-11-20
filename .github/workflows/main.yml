@@ -1,4 +1,4 @@
-name: Bina Derap TWA APK
+name: Bina Derap Android APK
 
 on:
   workflow_dispatch:
@@ -6,22 +6,17 @@ on:
     branches:
       - main
 
-env:
-  APP_URL: "https://derap-studio.ai.studio"
-  APP_NAME: "Derap"
-  PACKAGE_ID: "org.derap.nav.twa"
-
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repositori
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Sediakan Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '22'
 
@@ -38,85 +33,45 @@ jobs:
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
           curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
           unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-          mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-          rm cmdline-tools.zip
-
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
-          yes | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" \
-            "platform-tools" \
-            "platforms;android-34" \
-            "platforms;android-35" \
-            "build-tools;34.0.0" \
-            "build-tools;35.0.0"
-
+          rm -f cmdline-tools.zip
+          if [ -d "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" ]; then
+            rm -rf "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+            mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          fi
+          chmod -R +x "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
+          (printf 'y\n%.0s' {1..50}) | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null 2>&1 || true
+          (printf 'y\n%.0s' {1..50}) | "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
           echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
           echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
 
-      - name: Pasang Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
+      - name: Jana Keystore Tandatangan APK Derap
+        run: |
+          keytool -genkeypair -v -keystore "$GITHUB_WORKSPACE/derap-android.keystore" -alias derapkey -keyalg RSA -keysize 2048 -validity 10000 -storepass derap123 -keypass derap123 -dname "CN=Derap, OU=Navigation, O=Derap, L=Melaka, ST=Melaka, C=MY"
 
-      - name: Nyahkod Keystore Android
-        env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      - name: Bina Projek Android & APK Derap
         run: |
           set -e
-          mkdir -p android-signing
-          echo "$KEYSTORE_BASE64" | base64 -d > android-signing/release.keystore
+          mkdir -p "$GITHUB_WORKSPACE/derap-project/app/src/main/java/org/derap/nav/app" "$GITHUB_WORKSPACE/derap-project/app/src/main/res/values"
+          cd "$GITHUB_WORKSPACE/derap-project"
+          export ANDROID_HOME="$HOME/android-sdk"
+          printf "sdk.dir=%s\n" "$ANDROID_HOME" > local.properties
+          printf "rootProject.name = 'DerapApp'\ninclude ':app'\n" > settings.gradle
+          printf "buildscript {\n    repositories {\n        google()\n        mavenCentral()\n    }\n    dependencies {\n        classpath 'com.android.tools.build:gradle:8.1.4'\n    }\n}\n\nallprojects {\n    repositories {\n        google()\n        mavenCentral()\n    }\n}\n" > build.gradle
+          printf "plugins {\n    id 'com.android.application'\n}\n\nandroid {\n    namespace 'org.derap.nav.app'\n    compileSdk 34\n\n    defaultConfig {\n        applicationId \"org.derap.nav.app\"\n        minSdk 21\n        targetSdk 34\n        versionCode 1\n        versionName \"1.0.0\"\n    }\n\n    signingConfigs {\n        release {\n            storeFile file(\"%s/derap-android.keystore\")\n            storePassword \"derap123\"\n            keyAlias \"derapkey\"\n            keyPassword \"derap123\"\n        }\n    }\n\n    buildTypes {\n        release {\n            signingConfig signingConfigs.release\n            minifyEnabled false\n        }\n    }\n\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_17\n        targetCompatibility JavaVersion.VERSION_17\n    }\n}\n" "$GITHUB_WORKSPACE" > app/build.gradle
+          printf "<resources>\n    <string name=\"app_name\">Derap</string>\n</resources>\n" > app/src/main/res/values/strings.xml
 
-      - name: Konfigurasi Bubblewrap & Ikon PNG Tempatan
-        env:
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        run: |
-          set -e
-          ANDROID_SDK_ROOT="$HOME/android-sdk"
-          JDK_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
-          HOST_NAME=$(echo "$APP_URL" | sed -e 's|^[^/]*//||' -e 's|/.*$||')
-
-          mkdir -p "$HOME/.bubblewrap"
-          cat <<EOF > "$HOME/.bubblewrap/config.json"
-          {
-            "jdkPath": "$JDK_DIR",
-            "androidSdkPath": "$ANDROID_SDK_ROOT"
-          }
-          EOF
-
-          mkdir -p twa-app
           node -e '
             const fs = require("fs");
+            const path = require("path");
             const zlib = require("zlib");
-
-            const width = 512;
-            const height = 512;
-            const raw = Buffer.alloc((width * 4 + 1) * height);
-
-            for (let y = 0; y < height; y++) {
-              const rowStart = y * (width * 4 + 1);
-              raw[rowStart] = 0;
-              for (let x = 0; x < width; x++) {
-                const idx = rowStart + 1 + x * 4;
-                const inBox = x >= 112 && x <= 400 && y >= 112 && y <= 400;
-                if (inBox) {
-                  raw[idx] = 255;
-                  raw[idx + 1] = 255;
-                  raw[idx + 2] = 255;
-                  raw[idx + 3] = 255;
-                } else {
-                  raw[idx] = 0;
-                  raw[idx + 1] = 31;
-                  raw[idx + 2] = 63;
-                  raw[idx + 3] = 255;
-                }
-              }
-            }
 
             function crc32(buf) {
               let c = 0xffffffff;
               for (let i = 0; i < buf.length; i++) {
                 c ^= buf[i];
                 for (let k = 0; k < 8; k++) {
-                  c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+                  c = (c >>> 1) ^ (c & 1 ? 0xedb88320 : 0);
                 }
               }
               return (c ^ 0xffffffff) >>> 0;
@@ -131,118 +86,76 @@ jobs:
               return Buffer.concat([len, typeBuf, data, crcBuf]);
             }
 
-            const ihdr = Buffer.alloc(13);
-            ihdr.writeUInt32BE(width, 0);
-            ihdr.writeUInt32BE(height, 4);
-            ihdr[8] = 8;
-            ihdr[9] = 6;
-            ihdr[10] = 0;
-            ihdr[11] = 0;
-            ihdr[12] = 0;
+            function makeDerapPng(size) {
+              const raw = Buffer.alloc(size * (1 + size * 4));
+              for (let y = 0; y < size; y++) {
+                const rowStart = y * (1 + size * 4);
+                raw[rowStart] = 0;
+                for (let x = 0; x < size; x++) {
+                  const px = rowStart + 1 + x * 4;
+                  const nx = x / size;
+                  const ny = y / size;
+                  const inPad = nx >= 0.14 && nx <= 0.86 && ny >= 0.14 && ny <= 0.86;
+                  const inArrowTip = inPad && Math.abs(nx - 0.50) <= (ny - 0.24) * 0.65 && ny >= 0.24 && ny <= 0.56;
+                  const inStem = inPad && nx >= 0.44 && nx <= 0.56 && ny >= 0.48 && ny <= 0.74;
+                  if (inArrowTip || inStem) {
+                    raw[px] = 255;
+                    raw[px + 1] = 255;
+                    raw[px + 2] = 255;
+                    raw[px + 3] = 255;
+                  } else {
+                    raw[px] = 0;
+                    raw[px + 1] = 31;
+                    raw[px + 2] = 63;
+                    raw[px + 3] = 255;
+                  }
+                }
+              }
+              const ihdr = Buffer.alloc(13);
+              ihdr.writeUInt32BE(size, 0);
+              ihdr.writeUInt32BE(size, 4);
+              ihdr[8] = 8;
+              ihdr[9] = 6;
+              ihdr[10] = 0;
+              ihdr[11] = 0;
+              ihdr[12] = 0;
+              return Buffer.concat([
+                Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+                chunk("IHDR", ihdr),
+                chunk("IDAT", zlib.deflateSync(raw)),
+                chunk("IEND", Buffer.alloc(0))
+              ]);
+            }
 
-            const idat = zlib.deflateSync(raw);
-            const png = Buffer.concat([
-              Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
-              chunk("IHDR", ihdr),
-              chunk("IDAT", idat),
-              chunk("IEND", Buffer.alloc(0))
-            ]);
+            const sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192
+            };
 
-            fs.writeFileSync("twa-app/icon-512.png", png);
+            for (const [folder, sz] of Object.entries(sizes)) {
+              const dir = path.join("app/src/main/res", folder);
+              fs.mkdirSync(dir, { recursive: true });
+              const png = makeDerapPng(sz);
+              fs.writeFileSync(path.join(dir, "ic_launcher.png"), png);
+              fs.writeFileSync(path.join(dir, "ic_launcher_round.png"), png);
+            }
           '
 
-          cat <<EOF > twa-app/twa-manifest.json
-          {
-            "packageId": "$PACKAGE_ID",
-            "host": "$HOST_NAME",
-            "name": "$APP_NAME",
-            "launcherName": "Derap",
-            "display": "standalone",
-            "themeColor": "#001F3F",
-            "navigationColor": "#001F3F",
-            "backgroundColor": "#FFFFFF",
-            "enableNotifications": true,
-            "startUrl": "/",
-            "iconUrl": "http://127.0.0.1:8765/icon-512.png",
-            "splashScreenFadeOutDuration": 300,
-            "signingKey": {
-              "path": "../android-signing/release.keystore",
-              "alias": "$KEY_ALIAS"
-            },
-            "appVersionCode": 1,
-            "appVersionName": "1.0.0",
-            "shortcuts": [],
-            "generatorApp": "bubblewrap-cli",
-            "fallbackType": "customtabs",
-            "features": {},
-            "enableSiteSettingsShortcut": true,
-            "isChromeOSOnly": false,
-            "orientation": "default"
-          }
-          EOF
+          printf "<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\">\n    <uses-permission android:name=\"android.permission.INTERNET\" />\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\" />\n    <uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\" />\n    <uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\" />\n    <application\n        android:allowBackup=\"true\"\n        android:icon=\"@mipmap/ic_launcher\"\n        android:roundIcon=\"@mipmap/ic_launcher_round\"\n        android:label=\"@string/app_name\"\n        android:supportsRtl=\"true\"\n        android:usesCleartextTraffic=\"true\"\n        android:theme=\"@android:style/Theme.DeviceDefault.Light.NoActionBar\">\n        <activity android:name=\".MainActivity\" android:exported=\"true\" android:configChanges=\"orientation|screenSize|keyboardHidden\">\n            <intent-filter>\n                <action android:name=\"android.intent.action.MAIN\" />\n                <category android:name=\"android.intent.category.LAUNCHER\" />\n            </intent-filter>\n        </activity>\n    </application>\n</manifest>\n" > app/src/main/AndroidManifest.xml
+          printf "package org.derap.nav.app;\n\nimport android.app.Activity;\nimport android.graphics.Color;\nimport android.os.Bundle;\nimport android.webkit.GeolocationPermissions;\nimport android.webkit.WebChromeClient;\nimport android.webkit.WebSettings;\nimport android.webkit.WebView;\nimport android.webkit.WebViewClient;\n\npublic class MainActivity extends Activity {\n    @Override\n    protected void onCreate(Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        WebView webView = new WebView(this);\n        webView.setBackgroundColor(Color.WHITE);\n        WebSettings settings = webView.getSettings();\n        settings.setJavaScriptEnabled(true);\n        settings.setGeolocationEnabled(true);\n        settings.setDomStorageEnabled(true);\n        settings.setDatabaseEnabled(true);\n        settings.setLoadWithOverviewMode(true);\n        settings.setUseWideViewPort(true);\n        settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);\n        webView.setWebChromeClient(new WebChromeClient() {\n            @Override\n            public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {\n                callback.invoke(origin, true, false);\n            }\n        });\n        webView.setWebViewClient(new WebViewClient());\n        setContentView(webView);\n        webView.loadUrl(\"https://derap-studio.ai.studio/\");\n    }\n}\n" > app/src/main/java/org/derap/nav/app/MainActivity.java
+          rm -rf /opt/gradle/gradle-8.4 gradle.zip
+          mkdir -p /opt/gradle
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.4-bin.zip -o gradle.zip
+          unzip -q gradle.zip -d /opt/gradle
+          rm -f gradle.zip
+          chmod +x /opt/gradle/gradle-8.4/bin/gradle
+          /opt/gradle/gradle-8.4/bin/gradle assembleRelease --no-daemon
 
-      - name: Jana projek Android TWA & bina APK
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          JAVA_HOME: ${{ env.JAVA_HOME }}
-        run: |
-          set -e
-          cd twa-app
-
-          if [ ! -f "build.gradle" ]; then
-            npm init -y >/dev/null 2>&1
-            npm install --no-save @bubblewrap/core >/dev/null 2>&1
-            node -e '
-              const fs = require("fs");
-              const http = require("http");
-              const bubblewrapCore = require("@bubblewrap/core");
-              const { TwaManifest, GradleWrapper, TwaGenerator, ConsoleLog } = bubblewrapCore;
-
-              (async () => {
-                const pngBuffer = fs.readFileSync("./icon-512.png");
-                const server = http.createServer((req, res) => {
-                  res.writeHead(200, {
-                    "Content-Type": "image/png",
-                    "Content-Length": pngBuffer.length
-                  });
-                  res.end(pngBuffer);
-                });
-
-                await new Promise((resolve) => server.listen(8765, "127.0.0.1", resolve));
-
-                try {
-                  const log = ConsoleLog ? new ConsoleLog("derap-twa") : console;
-                  const manifestJson = JSON.parse(fs.readFileSync("./twa-manifest.json", "utf8"));
-                  manifestJson.iconUrl = "http://127.0.0.1:8765/icon-512.png";
-                  const twaManifest = new TwaManifest(manifestJson);
-                  const twaGenerator = new TwaGenerator();
-                  await twaGenerator.createTwaProject(process.cwd(), twaManifest, log);
-                  const gradleWrapper = new GradleWrapper(log);
-                  await gradleWrapper.install(process.cwd(), log);
-                } finally {
-                  server.close();
-                }
-              })().catch((err) => {
-                console.error(err);
-                process.exit(1);
-              });
-            '
-          fi
-
-          bubblewrap build \
-            --skipPwaValidation \
-            --signingKeyPath="../android-signing/release.keystore" \
-            --signingKeyAlias="$KEY_ALIAS" \
-            --storePassword="$KEYSTORE_PASSWORD" \
-            --keyPassword="$KEY_PASSWORD" < /dev/null
-
-      - name: Muat naik artifak APK & AAB
-        uses: actions/upload-artifact@v4
+      - name: Muat Naik Fail APK Derap sebagai Artifact
+        uses: actions/upload-artifact@v5
         with:
-          name: derap-studio-twa-release
-          path: |
-            twa-app/app-release-signed.apk
-            twa-app/app-release-bundle.aab
-          if-no-files-found: error
+          name: Derap-Android-APK
+          path: derap-project/**/*.apk
