@@ -64,7 +64,7 @@ jobs:
           mkdir -p android-signing
           echo "$KEYSTORE_BASE64" | base64 -d > android-signing/release.keystore
 
-      - name: Sediakan konfigurasi Bubblewrap
+      - name: Konfigurasi Bubblewrap (JDK & Android SDK)
         env:
           JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
@@ -72,6 +72,14 @@ jobs:
           ANDROID_SDK_ROOT="$HOME/android-sdk"
           JDK_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
           HOST_NAME=$(echo "$APP_URL" | sed -e 's|^[^/]*//||' -e 's|/.*$||')
+
+          mkdir -p "$HOME/.bubblewrap"
+          cat <<EOF > "$HOME/.bubblewrap/config.json"
+          {
+            "jdkPath": "$JDK_DIR",
+            "androidSdkPath": "$ANDROID_SDK_ROOT"
+          }
+          EOF
 
           mkdir -p twa-app
           if [ ! -f "twa-app/twa-manifest.json" ]; then
@@ -111,27 +119,26 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
           set -e
-          ANDROID_SDK_ROOT="$HOME/android-sdk"
-          JDK_DIR="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which java))))}"
-
           cd twa-app
-          yes "n" | bubblewrap update --skipPwaValidation --manifest=twa-manifest.json || true
-          yes "n" | bubblewrap build \
+          if [ ! -f "build.gradle" ]; then
+            bubblewrap init --manifest=./twa-manifest.json --skipPwaValidation < /dev/null
+          else
+            bubblewrap update --skipPwaValidation < /dev/null || true
+          fi
+
+          bubblewrap build \
             --skipPwaValidation \
-            --jdkPath="$JDK_DIR" \
-            --androidSdkPath="$ANDROID_SDK_ROOT" \
             --signingKeyPath="../android-signing/release.keystore" \
             --signingKeyAlias="$KEY_ALIAS" \
             --storePassword="$KEYSTORE_PASSWORD" \
-            --keyPassword="$KEY_PASSWORD"
+            --keyPassword="$KEY_PASSWORD" < /dev/null
 
       - name: Muat naik artifak APK & AAB
         uses: actions/upload-artifact@v4
         with:
-          name: derap-twa-release
+          name: derap-studio-twa-release
           path: |
             twa-app/app-release-signed.apk
             twa-app/app-release-bundle.aab
