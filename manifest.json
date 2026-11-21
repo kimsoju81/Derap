@@ -6,14 +6,113 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "tabbed",
+    "standalone",
+    "minimal-ui"
+  ],
+  "tab_strip": {
+    "home_tab": {
+      "url": "/",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    "new_tab_button": {
+      "url": "/?shortcut=search"
+    }
+  },
   "orientation": "any",
   "background_color": "#efece1",
-  "theme_color": "#0f1c30",
+  "theme_color": "#efece1",
   "lang": "ms",
   "dir": "ltr",
-  "categories": ["navigation", "travel", "utilities"],
+  "categories": [
+    "navigation",
+    "travel",
+    "utilities"
+  ],
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "/manifest.json"
+    },
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=com.webapp.derap",
+      "id": "com.webapp.derap"
+    }
+  ],
+  "scope_extensions": [
+    {
+      "origin": "https://ais-pre-57s5xdunuscelbusir4cnn-91300137923.asia-southeast1.run.app"
+    },
+    {
+      "origin": "https://ais-dev-57s5xdunuscelbusir4cnn-91300137923.asia-southeast1.run.app"
+    }
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "focus-existing",
+      "auto"
+    ]
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "note_taking": {
+    "new_note_url": "/?action=new-note"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "geo",
+      "url": "/?geo=%s"
+    },
+    {
+      "protocol": "web+derap",
+      "url": "/?route=%s"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "/?action=open-route-file",
+      "accept": {
+        "application/gpx+xml": [
+          ".gpx"
+        ],
+        "application/geo+json": [
+          ".geojson"
+        ],
+        "application/vnd.google-earth.kml+xml": [
+          ".kml"
+        ]
+      },
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "launch_type": "single-client"
+    }
+  ],
+  "share_target": {
+    "action": "/?action=share-target",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
   "icons": [
     {
       "src": "/pwa-192x192.png",
@@ -38,6 +137,22 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/derap-mobile.jpg",
+      "sizes": "1220x2712",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Paparan Peta Laluan, Trafik & Anggaran Kos Derap di Telefon"
+    },
+    {
+      "src": "/screenshots/derap-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Paparan Navigasi Landskap & Kokpit Derap di Skrin Lebar"
     }
   ],
   "shortcuts": [
@@ -66,6 +181,46 @@
           "type": "image/png"
         }
       ]
+    },
+    {
+      "name": "Nota Lokasi Baharu",
+      "short_name": "Nota",
+      "description": "Catat nota perjalanan atau lokasi pilihan",
+      "url": "/?action=new-note",
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "widgets": [
+    {
+      "name": "Status Navigasi Derap",
+      "short_name": "Derap",
+      "description": "Akses pantas trafik jalan raya, carian destinasi dan status navigasi Derap.",
+      "tag": "derap-nav-widget",
+      "ms_ac_template": "/widgets/nav-template.json",
+      "data": "/widgets/nav-data.json",
+      "type": "application/json",
+      "screenshots": [
+        {
+          "src": "/screenshots/derap-widget.png",
+          "sizes": "600x400",
+          "label": "Pratonton Widget Navigasi Derap"
+        }
+      ],
+      "icons": [
+        {
+          "src": "/pwa-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ],
+      "auth": false,
+      "update": 3600
     }
   ]
 }
