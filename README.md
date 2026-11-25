@@ -1,92 +1,60 @@
-# Derap — Navigasi Jalan Raya Pintar Malaysia
+# Derap — Aplikasi Navigasi Jalan Raya Malaysia (OpenStreetMap)
 
-**Derap** ialah aplikasi web progresif (PWA) navigasi jalan raya pintar yang direka khusus untuk pemanduan di Malaysia dengan paparan peta moden, panduan lorong berketepatan tinggi, kawalan bulatan pintar, carian POI masa nyata, serta sokongan peta luar talian automatik.
+**Derap** ialah aplikasi web navigasi jalan raya pintar untuk kegunaan di Malaysia yang dibina menggunakan **React, TypeScript, Vite, Leaflet, OpenStreetMap, Nominatim, dan OSRM**. Aplikasi ini tidak menggunakan sebarang SDK atau API proprietari Google Maps.
 
----
+## 1. Aliran Skrin & Reka Bentuk Utama
 
-## Ciri Utama Navigasi
-
-### 1. Enjin Peta Pelbagai Sumber & Kesegaran Data Automatik
-- **3 Pilihan Peta Kolaj**:
-  - **OpenFreeMap** (Vektor moden & ringan)
-  - **Peta Satelit** (Imej satelit resolusi tinggi)
-  - **GrabMaps** (Laluan bandar & komersial Malaysia)
-- **Auto-Sync & Cache-Busting Pintar**: Versi data peta diselaraskan secara automatik mengikut minggu/bulan semasa (`YYYY-MM-WW`) setiap kali aplikasi dilancarkan tanpa membebankan CPU atau memanaskan telefon.
-- **Kemas Kini Peta Terkini**: Butang pembersihan cache jubin & carian lama beserta penunjuk status kesegaran data secara langsung.
-
-### 2. Panduan Lorong (Lane Guidance) & Kawalan Bulatan Pintar
-- **Peka Simpang & Susur Keluar Bertingkat (Flyover / Ramp)**: Mengesan laluan utama, susur keluar turun taraf (jalan kampung) dan susur masuk naik taraf (jalan persekutuan/lebuh raya) tanpa melangkau simpang kritikal.
-- **Paparan Lorong Sebenar**: Menunjukkan bilangan lorong sebenar (termasuk jalan 4 lorong) serta lorong tepat yang perlu diikuti.
-- **Kawalan Keluar Bulatan (1 hingga 6 Susur Keluar)**: Mengira semua jenis susur keluar termasuk jalan kecil dan pusingan-U, serta **menahan arahan baharu sehingga pemandu keluar sepenuhnya daripada bulatan, simpang, atau laluan bergabung (merge road)**.
-- **Pengiraan Semula Pusingan-U Waktu Puncak**: Pada waktu puncak, sistem mencari pusingan-U yang dibenarkan secara sah atau melalui simpang tiga/empat di hadapan apabila laluan dikira semula.
-
-### 3. Carian POI Masa Nyata & Susun Atur Skrin Pintar
-- **Carian Selari Overpass API (Radius 25km)**: Menarik data terus daripada pangkalan data langsung OpenStreetMap supaya kedai, warung, stesen petrol, dan jalan baharu terus ditemui.
-- **Susun Atur Carian Hentian**:
-  - Apabila butang **Tambah Hentian (`+`)** dibuka:
-    1. Barisan 1: **Lokasi anda**
-    2. Barisan 2: **Ke mana?**
-    3. Barisan 3: **Tambah hentian**
-  - Butang tukar atas-bawah (`⇅`) di bawah butang `+` menukar kedudukan antara **Lokasi anda** dan **Tambah hentian** secara langsung.
-- **Susun Atur Lanskap Pintar**: Panel kawalan bergerak ke sebelah kiri dan kedudukan pemandu dipusatkan pada separuh bahagian kanan skrin untuk penglihatan jalan hadapan yang lebih luas.
-
-### 4. Peta Luar Talian Automatik (Seamless Auto Offline) & Penjimatan Haba
-- Jubin peta dan data laluan di-cache secara automatik semasa penggunaan biasa untuk peralihan lancar apabila isyarat internet lemah.
-- Pengoptimuman kadar bingkai GPS, pengurangan panggilan latar belakang, dan penjimatan bateri bagi mengelakkan telefon menjadi panas semasa navigasi panjang.
+1. **Layer Menu Utama Derap (Muncul Paling Hadapan Sebaik Dilancarkan)**:
+   - Memaparkan identiti jenama **Derap** berinspirasikan motif batik/songket Malaysia dengan dua pilihan utama bersaiz besar: **Ke Mana?** (carian laluan) dan **Lihat Peta** (terus ke peta penuh).
+   - Dilengkapi bar bawah untuk **Telefon** (talian kecemasan & bantuan lebuhraya Malaysia), **Bunyi** (kawalan suara arahan Bahasa Melayu), dan **Peralatan** (status koordinat GPS & pengurusan data tempatan).
+2. **Layer Carian "Route Info" (Selepas Butang "Ke Mana?" Ditekan)**:
+   - Panel carian lama dimansuhkan dan digantikan sepenuhnya dengan skrin **Route Info** yang menyokong input **Your location (Lokasi Mula)**, **Perhentian (A)**, dan **Choose destination (Destinasi)** berserta ringkasan masa dan jarak (`Total trip: X min (Y km)`) dan butang **Done**.
+   - Senarai lokasi di bawah memaparkan bulatan ikon pin dengan jarak dalam `km` di bawah setiap bulatan, carian tempat masa nyata Nominatim, serta bar bawah **Choose on map (`Map`)** untuk memilih titik secara terus di atas peta.
+2. **Mod Navigasi Aktif (Gaya Garmin Maps)**:
+   - Apabila pengguna menekan **MULA NAVIGASI**, antara muka bertukar kepada paparan pemanduan ala **Garmin Drive**:
+     - **Papan Tanda Lebuhraya Hijau di Atas**: Memaparkan ikon anak panah belokan besar, jarak ke simpang seterusnya, nama jalan/lebuhraya dalam Bahasa Melayu, serta jalur **"Kemudian:"** untuk belokan berikutnya.
+     - **Bar Kokpit Telemetri di Bawah**: Memaparkan kelajuan semasa (`km/j` daripada GPS), baki jarak, baki masa, waktu ketibaan (ETA), kawalan suara arahan (Web Speech API), mod **Simulasi**, dan butang **HENTIKAN**.
+3. **Mod Laporan Keadaan Jalan (Gaya Waze)**:
+   - Butang laporan kuning/jingga membuka laci kategori laporan berinspirasikan Waze (*Trafik Sesak, Polis & Penguatkuasa, Kemalangan, Bahaya Atas Jalan, Cuaca & Banjir*).
+   - **Ketelusan Data**: Aplikasi ini **tidak mereka-reka data trafik masa nyata atau laporan palsu**. Ia memaparkan notis jelas bahawa pelayan komuniti pusat dan suapan trafik langsung belum disambungkan; sebarang pin laporan yang ditandakan hanya disimpan secara tempatan di dalam `localStorage` pelayar pengguna.
 
 ---
 
-## Keupayaan Progressive Web App (PWA)
-
-Derap dibina sebagai PWA lengkap melalui `/public/manifest.json` dan `/public/sw.js`:
-
-| Keupayaan | Konfigurasi / API | Fungsi dalam Derap |
-| :--- | :--- | :--- |
-| **Pemasangan Aplikasi** | `manifest.json`, `usePWAInstall`, `PWAInstallButton` | Pemasangan terus ke skrin utama Android, Desktop, dan panduan iOS Safari. |
-| **Tangkapan Skrin (Screenshots)** | `screenshots` (`wide` & `narrow`) | Memaparkan pratonton antara muka Derap pada dialog pemasangan PWA. |
-| **Pelanjutan Skop (Scope Extensions)** | `scope_extensions` | Memastikan navigasi domain peta (`openfreemap.org`, `openstreetmap.org`, `overpass-api.de`) kekal lancar. |
-| **Aplikasi Berkaitan** | `related_applications` | Menghubungkan identiti web app dan rujukan aplikasi natif berkaitan. |
-| **Penarafan Umur IARC** | `iarc_rating_id` | Kod pensijilan International Age Rating Coalition (IARC) untuk kesesuaian semua peringkat umur. |
-| **Pengendali Fail (File Handlers)** | `file_handlers` | Membuka fail laluan `.gpx`, `.kml`, dan `.geojson` terus dengan Derap. |
-| **Pengendali Pelancaran** | `launch_handler` (`focus-existing`) | Mengelakkan tetingkap berganda dengan memfokuskan sesi Derap sedia ada. |
-| **Pengendali Protokol** | `protocol_handlers` (`geo:`, `web+derap:`) | Membuka koordinat `geo:lat,lon` dan pautan khas `web+derap:` terus ke peta Derap. |
-| **Sasaran Kongsi (Share Target)** | `share_target` | Menerima lokasi atau pautan peta yang dikongsi daripada aplikasi lain. |
-| **Mod Bertab (Tabbed Mode)** | `display_override: ["tabbed", ...]` & `tab_strip` | Menyokong berbilang tab laluan dalam satu tetingkap PWA pada desktop. |
-| **Panel Sisi Edge** | `edge_side_panel` | Menyokong pembukaan Derap pada panel sisi pelayar Microsoft Edge (`420px`). |
-| **Ambil Nota (Note Taking)** | `note_taking` | Laluan pantas mencipta nota perjalanan/lokasi baharu (`/?action=new-note`). |
-| **Widget Sistem Operasi** | `widgets` + Adaptive Cards (`/public/widgets/`) | Memaparkan status navigasi dan akses pantas **Ke Mana?** terus pada papan pemuka OS. |
-| **Segerak Latar Belakang** | Background Sync API (`sync`) | Menyegerakkan data tertunda secara automatik sebaik sahaja sambungan internet pulih. |
-| **Segerak Berkala** | Periodic Background Sync API (`periodicsync`) | Menyemak kesegaran versi peta dan mengemas kini widget secara berkala di latar belakang. |
-| **Notifikasi Tolak Web** | Web Push API (`push` & `notificationclick`) | Memaparkan amaran trafik atau kemas kini laluan walaupun aplikasi sedang ditutup. |
-
----
-
-## Struktur Projek Ringkas
-
-- `public/manifest.json` — Konfigurasi lengkap Web App Manifest PWA
-- `public/sw.js` — Service Worker (Offline Cache, Background Sync, Periodic Sync, Web Push, Widgets)
-- `public/widgets/` — Templat & data Adaptive Card bagi PWA Widget
-- `public/screenshots/` — Tangkapan skrin rasmi (`wide` 1280×720 & `narrow` 720×1280)
-- `src/App.tsx` — Orkestrasi peta utama, navigasi, menu Derap, dan pengendalian intent PWA
-- `src/components/RouteInfoSearchLayer.tsx` — Panel carian *Ke Mana?*, susunan 3 baris hentian, dan carian POI
-- `src/components/PWAInstallButton.tsx` & `src/hooks/usePWAInstall.ts` — Antara muka pemasangan PWA dalam aplikasi
-- `src/utils/pwaManager.ts` — Pengurus pendaftaran Service Worker, Sync, Push, Share Target, dan Protocol/File Handlers
-
----
-
-## Menjalankan Projek Secara Tempatan
+## 2. Pemasangan dan Cara Menjalankan Aplikasi
 
 ```bash
-# 1. Pasang pakej bergantung
+# 1. Pasang semua kebergantungan
 npm install
 
-# 2. Jalankan pelayan pembangunan (port 3000)
+# 2. Jalankan pelayan pembangunan (Vite)
 npm run dev
 
-# 3. Bina versi produksi
+# 3. Bina untuk produksi
 npm run build
 ```
 
-## Lesen
+---
 
-Hak Cipta Terpelihara © Derap Navigasi Malaysia.
+## 3. Polisi Penggunaan API Awam & Had Perkhidmatan
+
+Aplikasi ini menggunakan servis komuniti terbuka bagi tujuan prototaip dan pembangunan:
+
+- **Jubin Peta OpenStreetMap (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`)**:
+  - Tertakluk kepada [OpenStreetMap Tile Usage Policy](https://operations.osmfoundation.org/policies/tiles/).
+  - Atribusi `© OpenStreetMap contributors` dipaparkan secara jelas dengan pautan rasmi. Jangan memuat turun jubin secara pukal untuk kegunaan luar talian menggunakan pelayan jubin awam ini.
+- **Carian Geokod Nominatim (`https://nominatim.openstreetmap.org`)**:
+  - Tertakluk kepada [Nominatim Usage Policy](https://operations.osmfoundation.org/policies/nominatim/).
+  - Kod dalam `src/services/geocoding.ts` menggunakan *debounce* (850ms), pembatalan permintaan (`AbortController`), dan simpanan sementara dalam memori (*in-memory cache*) bagi mengelakkan permintaan pada setiap aksara.
+- **Pengiraan Laluan OSRM (`https://router.project-osrm.org`)**:
+  - Pelayan demo awam OSRM sesuai untuk ujian dan prototaip tetapi tidak menjamin ketersediaan SLA produksi.
+
+---
+
+## 4. Cara Menukar Penyedia Routing & Peta Pada Masa Hadapan
+
+1. **Menukar Penyedia Routing**:
+   - Buka `src/services/routing.ts` dan ubah pemalar `OSRM_BASE_URL` kepada URL pelayan OSRM peribadi anda, Valhalla, GraphHopper, atau OpenRouteService.
+2. **Menukar Pelayan Jubin Peta**:
+   - Buka `src/components/MapView.tsx` dan kemas kini prop `url` pada komponen `<TileLayer />` kepada pelayan jubin komersial atau hos sendiri sekiranya aplikasi digunakan secara berskala besar.
+3. **Menyambungkan Backend Trafik & Laporan Komuniti**:
+   - Sambungkan fungsi `handleAddLocalReport` dalam `src/App.tsx` kepada pangkalan data masa nyata (seperti Firebase Firestore atau PostgreSQL/WebSocket) untuk berkongsi laporan pengguna merentas peranti.
